@@ -108,9 +108,26 @@ def introduction_page():
 
 # Page d'exploration
 def exploration_page():
-    st.title("Exploration")
-    st.write("Ceci est la page d'exploration.")
-    st.write("Vous pouvez explorer les données ici.")
+    st.title("Exploration des données")
+    
+    # Description des datasets
+    st.subheader("Description des datasets")
+    
+    st.write(
+        "Nous avons deux types de datasets à notre disposition :"
+    )
+    
+    st.markdown(
+        """
+        ### 1. Incidents Records
+        - **Description** : Ce dataset contient des informations sur les incidents auxquels les pompiers de Londres ont répondu.
+        - **Colonnes** : 39 colonnes avec des informations variées sur les incidents.
+        
+        ### 2. Mobilisation Records
+        - **Description** : Ce dataset contient des informations sur le temps de réaction des véhicules de pompiers.
+        - **Colonnes** : 22 colonnes avec des informations détaillées sur le temps de réaction des engins des pompiers.
+        """
+    )
 
 # Page de visualisation des données
 def dataviz_page():
