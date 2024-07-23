@@ -1,5 +1,9 @@
 import streamlit as st
 import base64
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from feature_engine.encoding import MeanEncoder
@@ -64,27 +68,49 @@ page_bg_img = f"""
 
 # fonction pour charger le df Mobilisation et le df Mobilisation
 @st.cache_data  
-def Data_Mob():
+def Data_Mob(chemin):
     dico = {'IncidentNumber' : 'str',
          'DelayCodeId' : 'object',
          "CalYear" : 'str',
         "ResourceMobilisationId" : "str"}
-    Mobilisation = pd.read_csv("Data/Mobilisation_2009_2023.csv", dtype=dico)
+    Mobilisation = pd.read_csv(chemin, dtype=dico)
     Mobilisation = Mobilisation.drop(["TempsDepartSeconds", "TempsTrajetSeconds"], axis = 1)
 
-    return Mobilisation
+    premier_camion = Mobilisation[Mobilisation["PumpOrder"]==1][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
+                                                                            "DelayCode_Description","Division_station"]]
+
+    
+    second_camion = Mobilisation[Mobilisation["PumpOrder"]==2][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
+                                                                                "DelayCode_Description","Division_station"]]
+
+    premier_camion.rename({"TurnoutTimeSeconds" : "FirstPumpArriving_TurnoutTimeSec",
+                "TravelTimeSeconds" : "FirstPumpArriving_TravelTimeSec",
+                            "AttendanceTimeSeconds" : "Mob_FirstPump_AttendanceTime",
+                        "DelayCode_Description" : "FirstPump_DelayCode_Description",
+                        "Division_station" : "FirstPump_Division_staion"},axis = 1, inplace = True)
+
+
+    second_camion.rename({"TurnoutTimeSeconds" : "SecondPumpArriving_TurnoutTimeSec",
+                        "TravelTimeSeconds" : "SecondPumpArriving_TravelTimeSec",
+                        "AttendanceTimeSeconds" : "Mob_SecondPump_AttendanceTime",
+                        "DelayCode_Description" : "SecondPump_DelayCode_Description",
+                        "Division_station" : 'SecondPump_Division_staion'},axis = 1, inplace = True)
+        
+    Mob_pompes_12 = premier_camion.merge(second_camion, on = "IncidentNumber", how = "outer")
+
+    return [Mobilisation, Mob_pompes_12]
 
 # fonction pour charger le df Incident
 @st.cache_data  
-def Data_Incident():
+def Data_Incident(chemin):
     dico = {'IncidentNumber' : 'str',
                 "CalYear" : 'str'}
-    Incidents = pd.read_csv("Data/Incidents_2009_2024.csv", dtype = dico)
+    Incidents = pd.read_csv(chemin, dtype = dico)
     return Incidents
 
 # fonction pour charger le df mergé
 @st.cache_data  
-def Data_Merge():
+def Data_Merge(chemin):
     dico = {'IncidentNumber' : 'str',
              "CalYear" : "str",
                  "Easting_m" : 'str',
@@ -94,15 +120,15 @@ def Data_Merge():
                  "Easting_rounded" : "str",
                  "Northing_rounded" : "str"
          }
-    Merge = pd.read_csv("Data/Data_Mergees.csv", dtype = dico)
+    Merge = pd.read_csv(chemin, dtype = dico)
     return Merge
 
 # le dataFrame avec les données encodées et filtre 2020
 @st.cache_data
-def Data_Mod():
+def Data_Mod(chemin):
     dico = {'IncidentNumber' : 'str',     
          }
-    df = pd.read_csv("Data/Data_Encodee_V2_2_2020.csv", dtype = dico)
+    df = pd.read_csv(chemin, dtype = dico)
     # ncr de rename les colonnes avec les noms d'origine car les nouvelles étaient utilisées pour conserver les  valeurs originales après un pd.getdummies
     df = df.rename(columns={"IncidentGroup_orig" : "IncidentGroup",
                        "StopCodeDescription_orig" : "StopCodeDescription",
@@ -113,10 +139,11 @@ def Data_Mod():
     return df
 
 # chargement des datasets
-Mobilisation = Data_Mob()
-Incidents = Data_Incident()
-Merge = Data_Merge()
-df_2020 = Data_Mod()
+Mobilisation = Data_Mob("Data/Mobilisation_2009_2023.csv")[0]
+Mob_pompes_12 = Data_Mob("Data/Mobilisation_2009_2023.csv")[1]
+Incidents = Data_Incident("Data/Incidents_2009_2024.csv")
+Merge = Data_Merge("Data/Data_Mergees.csv")
+df_2020 = Data_Mod("Data/Data_Encodee_V2_2_2020.csv")
 
 # Titre de la page
 def page_title():
@@ -174,12 +201,12 @@ def introduction_page():
 
 
 
-# Page d'exploration
+# Page d'exploration/Visualisation/Preprocessing
 def exploration_page():
-    st.title("Exploration des données")
+    st.title("Données et preprocessing")
     
     # Description des datasets
-    st.subheader("Description des datasets")
+    st.header("Description des datasets et DataViz")
     
     st.write(
         "Nous avons deux types de datasets à notre disposition :"
@@ -187,11 +214,11 @@ def exploration_page():
     
     st.markdown(
         """
-        ### 1. Incidents Records
+        #### Incidents Records
         - **Description** : Ce dataset contient des informations sur les incidents auxquels les pompiers de Londres ont répondu.
         - **Colonnes** : 39 colonnes avec des informations variées sur les incidents.
         
-        ### 2. Mobilisation Records
+        #### Mobilisation Records
         - **Description** : Ce dataset contient des informations sur le temps de réaction des véhicules de pompiers.
         - **Colonnes** : 22 colonnes avec des informations détaillées sur le temps de réaction des engins des pompiers.
         """
@@ -199,9 +226,9 @@ def exploration_page():
 
 # Affichage des data frame Incident, Mobilisation, la transformation 
     # du df Mobilisation pour le merge et le df Mergé
-    st.title("Présentation des données")
+
     
-    st.subheader("1. Dataset Mobilisation")
+    st.subheader("  1. Dataset Mobilisation")
     st.write("""
              Dataset Mobilisation : contient les infos sur les camions déployés depuis 2009. Nottament les numéros d'incident, 
              des données sur l'identité des camions, les temps et date de mise en route, arrivée et de retour à la caserne, le lieu de déploiement,
@@ -211,7 +238,7 @@ def exploration_page():
     
     st.dataframe(Mobilisation.head())
     
-    st.subheader("2. Dataset Incident")
+    st.subheader("  2. Dataset Incident")
     st.write("""
              DataFrame Incident : présente les détails des incidents depuis 2009. Date, lieu d'incident, type d'incident, performance des premiers et
              second arrivant
@@ -220,185 +247,109 @@ def exploration_page():
     st.dataframe(Incidents.head())
     
     
-    st.subheader("3. Préparation des données pour le merge ")
+    st.subheader("  3. Préparation des données pour le merge ")
     
     # création du df qui sera mergé avec le df Incidents
-    premier_camion = Mobilisation[Mobilisation["PumpOrder"]==1][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
-                                                                             "DelayCode_Description","Division_station"]]
 
-    
-    second_camion = Mobilisation[Mobilisation["PumpOrder"]==2][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
-                                                                                 "DelayCode_Description","Division_station"]]
-
-    premier_camion.rename({"TurnoutTimeSeconds" : "FirstPumpArriving_TurnoutTimeSec",
-                "TravelTimeSeconds" : "FirstPumpArriving_TravelTimeSec",
-                            "AttendanceTimeSeconds" : "Mob_FirstPump_AttendanceTime",
-                         "DelayCode_Description" : "FirstPump_DelayCode_Description",
-                         "Division_station" : "FirstPump_Division_staion"},axis = 1, inplace = True)
-
-
-    second_camion.rename({"TurnoutTimeSeconds" : "SecondPumpArriving_TurnoutTimeSec",
-                         "TravelTimeSeconds" : "SecondPumpArriving_TravelTimeSec",
-                         "AttendanceTimeSeconds" : "Mob_SecondPump_AttendanceTime",
-                         "DelayCode_Description" : "SecondPump_DelayCode_Description",
-                         "Division_station" : 'SecondPump_Division_staion'},axis = 1, inplace = True)
-        
-    Mob_pompes_12 = premier_camion.merge(second_camion, on = "IncidentNumber", how = "outer")
     st.write("""
-             Dans le dataset Mobilisation, les numéros d'incident peuvent apparaitre plusieurs fois. On ne conserve que les infos des premiers et second 
-             camions arrivant. Pour n'avoir qu'une seule ligne par N° d'incident, on regroupe les variables en fonction de quel camion est concerné 
-             précisant si il s'agit du 1er ou 2nd camion. Seule quelques variables sont conservées.
+        Dans le dataset Mobilisation, les numéros d'incident peuvent apparaitre plusieurs fois. On ne conserve que les infos des premiers et second 
+        camions arrivant. Pour n'avoir qu'une seule ligne par N° d'incident, on regroupe les variables en fonction de quel camion est concerné 
+        précisant si il s'agit du 1er ou 2nd camion. Seule quelques variables sont conservées.
 
-             """)
+        """)
     
     st.dataframe(Mob_pompes_12.head())
     st.caption("Dataset à merger avec le dataset Incidents")
     
     
-    st.subheader("4. Merge des Dataset")
+    st.subheader("  4. Merge des Dataset")
     st.dataframe(Merge.head())
+
+    st.header("Preprocessing")
     
-    
-
-
-# Page de visualisation des données
-def dataviz_page():
-    st.title("DataVizualization")
-    st.write("Ceci est la page de visualisation des données.")
-    st.write("Vous pouvez voir les visualisations ici.")
-
-
-    fig = plt.figure(figsize = (10,7))
-    plt.subplot(2,1,1)
-    plt.bar(x=(Merge.FirstPumpArriving_AttendanceTime//60).value_counts().index,
-            height=(Merge.FirstPumpArriving_AttendanceTime//60).value_counts(),
-            label = "premier camion")
-    plt.xticks(ticks =range(0,21))
-    plt.legend()
-    plt.title("Distribution du temps de réaction du premier camion sur place en minutes")
-    plt.annotate(f'Moyenne:{"%02d:%02d" % (divmod(Merge.FirstPumpArriving_AttendanceTime.mean(),60))} \nÉcart-type :{"%02d:%02d" % (divmod(Merge.FirstPumpArriving_AttendanceTime.std(),60))} \nMédiane :{"%02d:%02d" % (divmod(Merge.FirstPumpArriving_AttendanceTime.median(),60))}',xy=(17,210000))
-
-    plt.subplot(2,1,2)
-    plt.bar(x = (Merge.SecondPumpArriving_AttendanceTime//60).value_counts().index,
-            height = (Merge.SecondPumpArriving_AttendanceTime//60).value_counts(),
-            color ='red', label = "second camion")
-    plt.xticks(ticks = range(0,21))
-    plt.xlabel("Temps de réponse en minutes")
-    plt.title("Distribution du temps de réaction du second camion sur place en minutes")
-    plt.annotate(f'Moyenne:{"%02d:%02d" % (divmod(Merge.SecondPumpArriving_AttendanceTime.mean(),60))}\nÉcart-type :{"%02d:%02d" % (divmod(Merge.FirstPumpArriving_AttendanceTime.std(),60))} \nMédiane :{"%02d:%02d" % (divmod(Merge.FirstPumpArriving_AttendanceTime.median(),60))}',xy=(17,70000))
-
-    plt.legend()
-    st.pyplot(fig)
-
-    # plot de temps de réaction en fonction inner outer
-    zone = df_2020.groupby("London_Zone")[["FirstPumpArriving_AttendanceTime"]].agg(["mean","std","median"])
-
-    inner_mean,inner_std,inner_median = tuple(zone.loc[1,"FirstPumpArriving_AttendanceTime"].map(lambda x : "%02d:%02d" % divmod(x,60)))
-    outer_mean,outer_std,outer_median = tuple(zone.loc[0,"FirstPumpArriving_AttendanceTime"].map(lambda x : "%02d:%02d" % divmod(x,60)))
-
-    fig,ax = plt.subplots(figsize=(8, 6))
-    sns.barplot(data =df_2020, y = df_2020.FirstPumpArriving_AttendanceTime//60,x = df_2020.London_Zone,
-                errorbar = 'ci')
-
-    plt.xlabel("Zone d'arrondissement")
-    plt.ylabel("Temps de réaction (minutes)")
-    plt.title("Temps de réaction moyen des 1er camions arrivés en fonction de la zone de Londres")
-
-    ax.bar_label(ax.containers[0],labels = [f'Moyenne:{outer_mean}\nÉcart-type :{outer_std} \nMédiane :{outer_median}',f'Moyenne:{inner_mean}\nÉcart-type :{inner_std} \nMédiane :{inner_median}'] ,fmt='Mean:')
-    plt.xticks([0,1],["Outer London", "Inner London"])
-
-    plt.ylim(0,7)
-    st.pyplot(fig)
-
-    box = st.checkbox("Résumé des stats")
-    if box : 
-        st.table(df_2020.groupby('London_Zone')["FirstPumpArriving_AttendanceTime"].agg(['mean','var','std']))
-
-    # temps de réponse en fonction de l'arrondissement
-    fig = plt.figure(figsize = (20,15))
-    sns.boxenplot(y = df_2020["FirstPumpArriving_AttendanceTime"] , x= "IncGeo_BoroughName"
-                ,data = df_2020, hue = "London_Zone")
-    plt.xticks(rotation=90)
-    plt.yticks(ticks = range(0,1260,60),labels= range(0,21))
-    plt.legend(loc = "upper right")
-    plt.title(" Temps de réponse 1er camion en fonction du quartier")
-    st.pyplot(fig)
-        
-    # fort impacte de si il y a retard ou non sur le temps d'arrivé
-    fig = plt.figure()
-    sns.boxplot(y =df_2020.FirstPumpArriving_AttendanceTime,x = df_2020.FirstPump_Delayed)
-    plt.yticks(range(0,1300,120), labels=list(range(0,22,2)))
-    plt.title("temps de réponse en fonction de si il y a retard")
-    st.pyplot(fig)
-
-
-    # faire un truc de selection pour les variables catégorielles avec des barplots
-    # type de propriete, type d'urgence, temporelle
-    st.write("plot de variables catégorielles en fonction du temps de réponse en selection quelles variable on veut à parti d'une selesctbox")
-    #plt.figure(figsize = (7,5))
-    #sns.barplot(x ="FirstPumpArriving_AttendanceTime", y = df_2020.PropertyCategory, data =df_2020)
-    #plt.title("Temps de réponse moyen en fonction de proporiete touchée")
-    #st.pyplot(fig)
-
-
 
 
 # Préparation des données pour la modélisation.
 # Suppression de certaines colonnes
-df_2020_mod = df_2020.drop(columns = ["IncidentNumber","DateOfCall","TimeOfCall","PropertyType","AddressQualifier",
-                    "Postcode_full","Postcode_district","IncidentStationGround","Easting_m","Northing_m","Easting_rounded","Northing_rounded","Latitude",
-                    "Longitude","Latitude_Station","Longitude_Station","NumStationsWithPumpsAttending","NumPumpsAttending","PumpCount",
-                    "PumpMinutesRounded","Notional Cost (£)","NumCalls","FirstPumpArriving_TravelTimeSec",
-                    "FirstPump_DelayCode_Description","FirstPump_Division_staion","tempsAPI"], axis = 1)
+@st.cache_data 
+def donnes_modelisation() :
+    """""
+    Préparation des données pour les modeles de reg
+    """""
+    df_2020_mod = df_2020.drop(columns = ["IncidentNumber","DateOfCall","TimeOfCall","PropertyType","AddressQualifier",
+                        "Postcode_full","Postcode_district","IncidentStationGround","Easting_m","Northing_m","Easting_rounded","Northing_rounded","Latitude",
+                        "Longitude","Latitude_Station","Longitude_Station","NumStationsWithPumpsAttending","NumPumpsAttending","PumpCount",
+                        "PumpMinutesRounded","Notional Cost (£)","NumCalls","FirstPumpArriving_TravelTimeSec",
+                        "FirstPump_DelayCode_Description","FirstPump_Division_staion","tempsAPI"], axis = 1)
 
-df_2020_mod = df_2020_mod.dropna(axis=0)
+    df_2020_mod = df_2020_mod.dropna(axis=0)
 
-# Features 
-X = df_2020_mod.drop(columns=["Weekday","Month","HourOfCall","Week_Weekend","London_Zone","CalYear","Same_Incident_Station",
-                          "FirstPumpArriving_AttendanceTime","AttendanceTime_Min","Periode","Periode_Rush","FirstPump_Delayed","FirstPumpArriving_TurnoutTimeSec",
-                          "Station_DelayFreq","IncGeo_WardNameNew","Ward_DelayFreq","Bo_DelayFreq" ,'Incident_Fire', 'Incident_Special Service',
-       'StopCode_Primary Fire', 'StopCode_Secondary Fire',
-       'StopCode_Special Service', '_Non Residential', '_Other Residential',
-       '_Outdoor', '_Outdoor Structure', '_Road Vehicle'])
+    # Features 
+    X = df_2020_mod.drop(columns=["Weekday","Month","HourOfCall","Week_Weekend","London_Zone","CalYear","Same_Incident_Station",
+                            "FirstPumpArriving_AttendanceTime","AttendanceTime_Min","Periode","Periode_Rush","FirstPump_Delayed","FirstPumpArriving_TurnoutTimeSec",
+                            "Station_DelayFreq","IncGeo_WardNameNew","Ward_DelayFreq","Bo_DelayFreq" ,'Incident_Fire', 'Incident_Special Service',
+        'StopCode_Primary Fire', 'StopCode_Secondary Fire',
+        'StopCode_Special Service', '_Non Residential', '_Other Residential',
+        '_Outdoor', '_Outdoor Structure', '_Road Vehicle'])
 
-# y pour la regression
-y_reg = df_2020_mod.FirstPumpArriving_AttendanceTime
+    # y pour la regression
+    y_reg = df_2020_mod.FirstPumpArriving_AttendanceTime
 
-# y pour la classification
-y_class = df_2020_mod.AttendanceTime_Min
+    # y pour la classification
+    y_class = df_2020_mod.AttendanceTime_Min
 
-# encodage de la target
-y_class = y_class.replace({'0-3min' : 0,
-        '3-6min' : 1,
-        '6-9min' : 2,
-        "9-12min" : 3,
-        '+12min' : 4
-        })
+    # encodage de la target
+    y_class = y_class.replace({'0-3min' : 0,
+            '3-6min' : 1,
+            '6-9min' : 2,
+            "9-12min" : 3,
+            '+12min' : 4
+            })
+    
+    return X, y_reg, y_class
 
-# Séparation train test et encodage, standardisation 
-#pour la regression
-X_train_reg,X_test_reg,y_train_reg,y_test_reg = train_test_split(X,y_reg, test_size = 0.25)
+X , y_reg, y_class =  donnes_modelisation()
 
-mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
-X_train_reg = mean_enc.fit_transform(X_train_reg,y_train_reg)
-X_test_reg = mean_enc.transform(X_test_reg)
+# Fonction pour Séparation train test et encodage, standardisation pour la regression et la classification
 
-scaler = RobustScaler()
-X_train_reg_sc = scaler.fit_transform(X_train_reg)
-X_test_reg_sc = scaler.transform(X_test_reg)
+@st.cache_data 
+def split_encode_reg(X, y_reg,) :
+    """""
+    Split , meanencode et standardise les données de regression  et renvoie les variables train et test scalée et non scalée)
+    """""
+    X_train_reg,X_test_reg,y_train_reg, y_test_reg = train_test_split(X,y_reg, test_size = 0.25)
 
-# pour la classification
-X_train_class,X_test_class,y_train_class,y_test_class = train_test_split(X,y_class, test_size = 0.25)
+    mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
+    X_train_reg = mean_enc.fit_transform(X_train_reg,y_train_reg)
+    X_test_reg = mean_enc.transform(X_test_reg)
 
-mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
-X_train_class = mean_enc.fit_transform(X_train_class,y_train_class)
-X_test_class = mean_enc.transform(X_test_class)
+    scaler = RobustScaler()
+    X_train_reg_sc = scaler.fit_transform(X_train_reg)
+    X_test_reg_sc = scaler.transform(X_test_reg)
+    return X_train_reg, X_test_reg, y_train_reg, y_test_reg, X_train_reg_sc, X_test_reg_sc 
 
-scaler = RobustScaler()
-X_train_class_sc = scaler.fit_transform(X_train_class)
-X_test_class_sc = scaler.transform(X_test_class)
+@st.cache_data 
+def split_encode_class(X ,y_class) :
+    """""
+    Split , meanencode et standardise les données de class renvoie les variables train et test scalée et non scalée)
+    """""
+    X_train_class,X_test_class,y_train_class,y_test_class = train_test_split(X,y_class, test_size = 0.25)
 
+    mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
+    X_train_class = mean_enc.fit_transform(X_train_class,y_train_class)
+    X_test_class = mean_enc.transform(X_test_class)
 
+    scaler = RobustScaler()
+    X_train_class_sc = scaler.fit_transform(X_train_class)
+    X_test_class_sc = scaler.transform(X_test_class)
+
+    return X_train_class, X_test_class, y_train_class, y_test_class, X_train_class_sc, X_test_class_sc
+
+# données pour la regression
+X_train_reg, X_test_reg, y_train_reg, y_test_reg, X_train_reg_sc, X_test_reg_sc = split_encode_reg(X,y_reg)
+
+# données pour la classification
+X_train_class, X_test_class, y_train_class, y_test_class, X_train_class_sc, X_test_class_sc = split_encode_class(X,y_class)
 
 # Page de modélisation
 def modeling_page():
@@ -482,12 +433,12 @@ def modeling_page():
         st.pyplot(fig)
 
 
-def plot_shap_summary(shap_values,X) :
-    shap.summary_plot(shap_values, X, plot_type="bar")
-    st.pyplot(plt.gcf())
-    plt.clf()
+    # def plot_shap_summary(shap_values,X) :
+    #     shap.summary_plot(shap_values, X, plot_type="bar")
+    #     st.pyplot(plt.gcf())
+    #     plt.clf()
 
-
+    # classification bins de 3 mins
     with tab2 : 
         st.write("tab2")
          # chargement des modèles entrainné
@@ -526,31 +477,37 @@ def plot_shap_summary(shap_values,X) :
         modeles = ["RandomForest", "DecisionTree","BalancedForest","Adaboost","RUSBoost"]
 
         st.write("Modèle 1")
-        option1 = st.selectbox("Sélectionnez un modèle", modeles, key = 1)
-        mat, rapport = rapport_mat(option1)
-        st.table(mat,width=1000)
+        class_option1 = st.selectbox("Sélectionnez un modèle", modeles, key = 3)
+        mat, rapport = rapport_mat(class_option1)
+        st.table(mat)
         st.dataframe(rapport.transpose()[0:5],width=450)
         st.dataframe(rapport.iloc[0:1,5:])
 
         st.write("Modèle 2")
-        option2 = st.selectbox("Sélectionnez un modèle", modeles,key = 2)
-        mat, rapport = rapport_mat(option2)
+        class_option2 = st.selectbox("Sélectionnez un modèle", modeles,key = 4)
+        mat, rapport = rapport_mat(class_option2)
         st.dataframe(mat)
         st.dataframe(rapport.transpose()[0:5])
         st.dataframe(rapport.iloc[0:1,5:])
 
+    # classification bins de diqtribution égales
     with tab3 : 
         st.write("2e classifcation")
 
+
+
+# Page de conclusion
+def conclusion_page() :
+    st.write("page de conclusion/ouverture")
 
 # Page principale
 def main():
     pages = {
         "Home": home_page,
         "Introduction": introduction_page,
-        "Exploration": exploration_page,
-        "DataVizualization": dataviz_page,
-        "Modélisation": modeling_page
+        "Jeu de données": exploration_page,
+        "Modélisation": modeling_page,
+        "Conclusion" : conclusion_page
     }
     
     st.sidebar.title("Navigation")
