@@ -310,46 +310,27 @@ def donnes_modelisation() :
 
 X , y_reg, y_class =  donnes_modelisation()
 
-# Fonction pour Séparation train test et encodage, standardisation pour la regression et la classification
 
-@st.cache_data 
-def split_encode_reg(X, y_reg,) :
-    """""
-    Split , meanencode et standardise les données de regression  et renvoie les variables train et test scalée et non scalée)
-    """""
-    X_train_reg,X_test_reg,y_train_reg, y_test_reg = train_test_split(X,y_reg, test_size = 0.25)
+X_train_reg,X_test_reg,y_train_reg, y_test_reg = train_test_split(X,y_reg, test_size = 0.25, random_state=45)
 
-    mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
-    X_train_reg = mean_enc.fit_transform(X_train_reg,y_train_reg)
-    X_test_reg = mean_enc.transform(X_test_reg)
+mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
+X_train_reg = mean_enc.fit_transform(X_train_reg,y_train_reg)
+X_test_reg = mean_enc.transform(X_test_reg)
 
-    scaler = RobustScaler()
-    X_train_reg_sc = scaler.fit_transform(X_train_reg)
-    X_test_reg_sc = scaler.transform(X_test_reg)
-    return X_train_reg, X_test_reg, y_train_reg, y_test_reg, X_train_reg_sc, X_test_reg_sc 
+scaler = RobustScaler()
+X_train_reg_sc = scaler.fit_transform(X_train_reg)
+X_test_reg_sc = scaler.transform(X_test_reg)
 
-@st.cache_data 
-def split_encode_class(X ,y_class) :
-    """""
-    Split , meanencode et standardise les données de class renvoie les variables train et test scalée et non scalée)
-    """""
-    X_train_class,X_test_class,y_train_class,y_test_class = train_test_split(X,y_class, test_size = 0.25)
+X_train_class,X_test_class,y_train_class,y_test_class = train_test_split(X,y_class, test_size = 0.25,random_state=45)
 
-    mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
-    X_train_class = mean_enc.fit_transform(X_train_class,y_train_class)
-    X_test_class = mean_enc.transform(X_test_class)
+mean_enc = MeanEncoder(smoothing='auto',unseen='encode')
+X_train_class = mean_enc.fit_transform(X_train_class,y_train_class)
+X_test_class = mean_enc.transform(X_test_class)
 
-    scaler = RobustScaler()
-    X_train_class_sc = scaler.fit_transform(X_train_class)
-    X_test_class_sc = scaler.transform(X_test_class)
+scaler = RobustScaler()
+X_train_class_sc = scaler.fit_transform(X_train_class)
+X_test_class_sc = scaler.transform(X_test_class)
 
-    return X_train_class, X_test_class, y_train_class, y_test_class, X_train_class_sc, X_test_class_sc
-
-# données pour la regression
-X_train_reg, X_test_reg, y_train_reg, y_test_reg, X_train_reg_sc, X_test_reg_sc = split_encode_reg(X,y_reg)
-
-# données pour la classification
-X_train_class, X_test_class, y_train_class, y_test_class, X_train_class_sc, X_test_class_sc = split_encode_class(X,y_class)
 
 # Page de modélisation
 def modeling_page():
@@ -389,6 +370,7 @@ def modeling_page():
         st.write("MAE :" , calcul_metrics_reg(md)[1])
         st.write("MSE :", calcul_metrics_reg(md)[2])
         
+    
         st.write("Rajout de bar pour choisir la range de values à prédir")
         
         fig = plt.figure(figsize = (15,8))
