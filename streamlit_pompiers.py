@@ -403,6 +403,7 @@ X_test_class_sc = scaler.transform(X_test_class)
 # Page de modélisation
 def modeling_page():
     st.title("Modélisation")
+    
     tab1, tab2, tab3 = st.tabs(["Régression", "Classification 1", "Classification 2"])
     
     with tab1 :
@@ -425,18 +426,17 @@ def modeling_page():
         
         def calcul_metrics_reg(model):
             y_pred = model.predict(X_test_reg_sc)
-            R2 = model.score(y_test_reg, y_pred)
+            R2 = r2_score(y_test_reg, y_pred)
             MAE = mean_absolute_error(y_test_reg,y_pred)
             MSE = mean_squared_error(y_test_reg,y_pred)
-            
             return R2, MAE, MSE
 
         st.write("Modèle 1")
         option1 = st.selectbox("Sélectionnez un modèle", modeles_reg, key = 1)
         md = dico_model_reg[option1]
-        # st.write("R2 :", calcul_metrics_reg(md)[0])
-        # st.write("MAE :" , calcul_metrics_reg(md)[1])
-        # st.write("MSE :", calcul_metrics_reg(md)[2])
+        st.write("R2 :", calcul_metrics_reg(md)[0])
+        st.write("MAE :" , calcul_metrics_reg(md)[1])
+        st.write("MSE :", calcul_metrics_reg(md)[2])
         
         st.write("Rajout de bar pour choisir la range de values à prédir")
         
@@ -469,13 +469,13 @@ def modeling_page():
 
         explainer = shap.explainers.LinearExplainer(Elastic, X_test_reg_sc,feature_names=X.columns)
         shap_values = explainer(X_test_reg_sc)
-        # plot des features importances
+        # # plot des features importances
         fig = plt.figure()
         shap.summary_plot(shap_values, X_test_reg_sc, plot_type="bar")
         st.pyplot(fig)
 
-        # redonne aux variables leur valeur d'origine
-        shap_values.data = X_test.values
+        # # redonne aux variables leur valeur d'origine
+        shap_values.data = X_test_reg.values
         
         fig = plt.figure()
         shap.plots.waterfall(shap_values[678])
@@ -490,54 +490,54 @@ def plot_shap_summary(shap_values,X) :
 
     with tab2 : 
         st.write("tab2")
-        # chargement des modèles entrainné
-    #     RandomForest_class = pickle.load(open('ModeleClass2/RandomForest', 'rb'))
-    #     BalancedForest = pickle.load(open("ModeleClass2/BalancedRamdomForest", 'rb'))  
-    #     Adaboost = pickle.load(open("ModeleClass2/AdaBoostClass", 'rb'))
-    #     DecisionTree = pickle.load(open("ModeleClass2/DecisionTree", 'rb'))
-    #     RUSBoost = pickle.load(open("ModeleClass2/RUSBoostClassifier", 'rb'))
+         # chargement des modèles entrainné
+        RandomForest_class = pickle.load(open('ModeleClass2/RandomForest', 'rb'))
+        BalancedForest = pickle.load(open("ModeleClass2/BalancedRamdomForest", 'rb'))  
+        Adaboost = pickle.load(open("ModeleClass2/AdaBoostClass", 'rb'))
+        DecisionTree = pickle.load(open("ModeleClass2/DecisionTree", 'rb'))
+        RUSBoost = pickle.load(open("ModeleClass2/RUSBoostClassifier", 'rb'))
 
     # # pour arranger l'ordre des colonnes et lignes dans les rapports de class et mat de conf
-    #     dico = {0 : "0-3min"
-    #         ,1 : "3-6min",
-    #         2 : "6-9min",
-    #         3 : "9-12min",
-    #         4 : "+12min"}
-    #     order = ["0-3min", "3-6min", "6-9min","9-12min","+12min"]
+        dico = {0 : "0-3min"
+            ,1 : "3-6min",
+            2 : "6-9min",
+            3 : "9-12min",
+            4 : "+12min"}
+        order = ["0-3min", "3-6min", "6-9min","9-12min","+12min"]
         
-    #     # pour récupérer le model à partir de leur nom
-    #     dico_model = { "RandomForest": RandomForest_class,
-    #                "DecisionTree" : DecisionTree,
-    #                "BalancedForest" : BalancedForest,
-    #                "Adaboost" : Adaboost,
-    #                "RUSBoost" : RUSBoost
-    #                }
+        # pour récupérer le model à partir de leur nom
+        dico_model = { "RandomForest": RandomForest_class,
+                   "DecisionTree" : DecisionTree,
+                   "BalancedForest" : BalancedForest,
+                   "Adaboost" : Adaboost,
+                   "RUSBoost" : RUSBoost
+                   }
         
-    #     #fonction qui affiche le rapport de classif et la mat de conf
-    #     def rapport_mat(model) : 
-    #         clf = dico_model[model]
-    #         y_pred_test = clf.predict(X_test_class_sc)
-    #         y_pred_adj = [dico[i] for i in y_pred_test]
-    #         mat = pd.crosstab(y_test_class.replace(dico),y_pred_adj,rownames=["reels"],colnames=["predits"]).reindex(index=order ,columns=order)
-    #         rapport = pd.DataFrame(classification_report_imbalanced(y_test_class,y_pred_test, target_names = order, output_dict = True))
+        #fonction qui affiche le rapport de classif et la mat de conf
+        def rapport_mat(model) : 
+            clf = dico_model[model]
+            y_pred_test = clf.predict(X_test_class_sc)
+            y_pred_adj = [dico[i] for i in y_pred_test]
+            mat = pd.crosstab(y_test_class.replace(dico),y_pred_adj,rownames=["reels"],colnames=["predits"]).reindex(index=order ,columns=order)
+            rapport = pd.DataFrame(classification_report_imbalanced(y_test_class,y_pred_test, target_names = order, output_dict = True))
             
-    #         return (mat ,rapport)
+            return (mat ,rapport)
 
-    #     modeles = ["RandomForest", "DecisionTree","BalancedForest","Adaboost","RUSBoost"]
+        modeles = ["RandomForest", "DecisionTree","BalancedForest","Adaboost","RUSBoost"]
 
-    #     st.write("Modèle 1")
-    #     option1 = st.selectbox("Sélectionnez un modèle", modeles, key = 1)
-    #     mat, rapport = rapport_mat(option1)
-    #     st.table(mat,width=1000)
-    #     st.dataframe(rapport.transpose()[0:5],width=450)
-    #     st.dataframe(rapport.iloc[0:1,5:])
+        st.write("Modèle 1")
+        option1 = st.selectbox("Sélectionnez un modèle", modeles, key = 1)
+        mat, rapport = rapport_mat(option1)
+        st.table(mat,width=1000)
+        st.dataframe(rapport.transpose()[0:5],width=450)
+        st.dataframe(rapport.iloc[0:1,5:])
 
-    #     st.write("Modèle 2")
-    #     option2 = st.selectbox("Sélectionnez un modèle", modeles,key = 2)
-    #     mat, rapport = rapport_mat(option2)
-    #     st.dataframe(mat)
-    #     st.dataframe(rapport.transpose()[0:5])
-    #     st.dataframe(rapport.iloc[0:1,5:])
+        st.write("Modèle 2")
+        option2 = st.selectbox("Sélectionnez un modèle", modeles,key = 2)
+        mat, rapport = rapport_mat(option2)
+        st.dataframe(mat)
+        st.dataframe(rapport.transpose()[0:5])
+        st.dataframe(rapport.iloc[0:1,5:])
 
     with tab3 : 
         st.write("2e classifcation")
