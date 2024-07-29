@@ -80,100 +80,8 @@ page_bg_img = f"""
 # fonction pour charger le df Mobilisation et le df Mobilisation
 
 pages = ["Home","Introduction","Jeu de données","Modélisation", "Conclusion"] 
+st.sidebar.title("Sommaire")
 page = st.sidebar.radio("Allez vers", pages)
-
-@st.cache_data  
-def Data_Mob(chemin):
-    dico = {'IncidentNumber' : 'str',
-        'DelayCodeId' : 'object',
-        "CalYear" : 'str',
-        "ResourceMobilisationId" : "str"}
-    Mobilisation = pd.read_csv(chemin, dtype=dico)
-    Mobilisation = Mobilisation.drop(["TempsDepartSeconds", "TempsTrajetSeconds"], axis = 1)
-
-    premier_camion = Mobilisation[Mobilisation["PumpOrder"]==1][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
-                                                                            "DelayCode_Description","Division_station"]]
-
-    
-    second_camion = Mobilisation[Mobilisation["PumpOrder"]==2][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
-                                                                                "DelayCode_Description","Division_station"]]
-
-    premier_camion.rename({"TurnoutTimeSeconds" : "FirstPumpArriving_TurnoutTimeSec",
-                "TravelTimeSeconds" : "FirstPumpArriving_TravelTimeSec",
-                            "AttendanceTimeSeconds" : "Mob_FirstPump_AttendanceTime",
-                        "DelayCode_Description" : "FirstPump_DelayCode_Description",
-                        "Division_station" : "FirstPump_Division_staion"},axis = 1, inplace = True)
-
-
-    second_camion.rename({"TurnoutTimeSeconds" : "SecondPumpArriving_TurnoutTimeSec",
-                        "TravelTimeSeconds" : "SecondPumpArriving_TravelTimeSec",
-                        "AttendanceTimeSeconds" : "Mob_SecondPump_AttendanceTime",
-                        "DelayCode_Description" : "SecondPump_DelayCode_Description",
-                        "Division_station" : 'SecondPump_Division_staion'},axis = 1, inplace = True)
-        
-    Mob_pompes_12 = premier_camion.merge(second_camion, on = "IncidentNumber", how = "outer")
-
-    return [Mobilisation, Mob_pompes_12]
-
-# fonction pour charger le df Incident
-@st.cache_data  
-def Data_Incident(chemin):
-    dico = {'IncidentNumber' : 'str',
-                "CalYear" : 'str'}
-    Incidents = pd.read_csv(chemin, dtype = dico)
-    return Incidents
-
-# fonction pour charger le df mergé
-@st.cache_data  
-def Data_Merge(chemin):
-    dico = {'IncidentNumber' : 'str',
-            "CalYear" : "str",
-                "Easting_m" : 'str',
-                "Northing_m" : "str",
-                "UPRN" : "str" ,
-                "USRN" : "str",
-                "Easting_rounded" : "str",
-                "Northing_rounded" : "str"
-        }
-    Merge = pd.read_csv(chemin, dtype = dico)
-    return Merge
-
-# le dataFrame avec les données encodées et filtre 2020
-@st.cache_data
-def Data_Mod(chemin):
-    
-    dico = {'IncidentNumber' : 'str',     
-        }
-    df = pd.read_csv(chemin, dtype = dico)
-    # ncr de rename les colonnes avec les noms d'origine car les nouvelles étaient utilisées pour conserver les  valeurs originales après un pd.getdummies
-    df = df.rename(columns={"IncidentGroup_orig" : "IncidentGroup",
-                    "StopCodeDescription_orig" : "StopCodeDescription",
-                    "PropertyCategory_orig" : "PropertyCategory"})
-
-    df["dst_StationIncident"] = df["dst_StationIncident"]/1000
-
-    return df
-
-# Mobilisation = Data_Mob("Data/Mobilisation_2009_2023.csv")[0]
-# Mob_pompes_12 = Data_Mob("Data/Mobilisation_2009_2023.csv")[1]
-# Incidents = Data_Incident("Data/Incidents_2009_2024.csv")
-# Merge = Data_Merge("Data/Data_Mergees.csv")
-df_2020 = Data_Mod("Data/Data_Encodee_V2_2_2020.csv") 
-
-# if "Mobilisation" not in st.session_state :
-#     st.session_state["Mobilisation"] = Data_Mob("Data/Mobilisation_2009_2023.csv")[0]
-    
-# if "Mob_pompes_12" not in st.session_state :
-#     st.session_state["Mob_pompes_12"] = Data_Mob("Data/Mobilisation_2009_2023.csv")[1]
-
-# if "Incidents" not in st.session_state :
-#     st.session_state["Incidents"] = Data_Incident("Data/Incidents_2009_2024.csv")
-    
-# if "Merge" not in st.session_state :
-#     st.session_state["Merge"] = Data_Merge("Data/Data_Mergees.csv")
-    
-if "df_2020" not in st.session_state :
-    st.session_state["df_2020"] = Data_Mod("Data/Data_Encodee_V2_2_2020.csv")
 
 
 # Titre de la page
@@ -219,42 +127,145 @@ if page == pages[1] :
     )
 
      
-    st.subheader("Liens Utiles")
-    st.write(
-        "Pour en savoir plus sur les méthodologies utilisées et accéder aux données, veuillez consulter les liens suivants :"
-    )
     
-    st.markdown("[Données des Interventions](https://exemple.com/donnees-interventions)")
-    st.markdown("[Documentation du Projet](https://exemple.com/documentation-projet)")
-
     
 
 # Page d'exploration/Visualisation/Preprocessing
 if page == pages[2] :
   
+    @st.cache_data  
+    def Data_Mob(chemin):
+        dico = {'IncidentNumber' : 'str',
+            'DelayCodeId' : 'object',
+            "CalYear" : 'str',
+            "ResourceMobilisationId" : "str"}
+        Mobilisation = pd.read_csv(chemin, dtype=dico)
+        Mobilisation = Mobilisation.drop(["TempsDepartSeconds", "TempsTrajetSeconds"], axis = 1)
+
+        premier_camion = Mobilisation[Mobilisation["PumpOrder"]==1][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
+                                                                                "DelayCode_Description","Division_station"]]
+
+        
+        second_camion = Mobilisation[Mobilisation["PumpOrder"]==2][["IncidentNumber","TurnoutTimeSeconds","TravelTimeSeconds","AttendanceTimeSeconds",
+                                                                                    "DelayCode_Description","Division_station"]]
+
+        premier_camion.rename({"TurnoutTimeSeconds" : "FirstPumpArriving_TurnoutTimeSec",
+                    "TravelTimeSeconds" : "FirstPumpArriving_TravelTimeSec",
+                                "AttendanceTimeSeconds" : "Mob_FirstPump_AttendanceTime",
+                            "DelayCode_Description" : "FirstPump_DelayCode_Description",
+                            "Division_station" : "FirstPump_Division_staion"},axis = 1, inplace = True)
+
+
+        second_camion.rename({"TurnoutTimeSeconds" : "SecondPumpArriving_TurnoutTimeSec",
+                            "TravelTimeSeconds" : "SecondPumpArriving_TravelTimeSec",
+                            "AttendanceTimeSeconds" : "Mob_SecondPump_AttendanceTime",
+                            "DelayCode_Description" : "SecondPump_DelayCode_Description",
+                            "Division_station" : 'SecondPump_Division_staion'},axis = 1, inplace = True)
+            
+        Mob_pompes_12 = premier_camion.merge(second_camion, on = "IncidentNumber", how = "outer")
+
+        return [Mobilisation, Mob_pompes_12]
+
+    # fonction pour charger le df Incident
+    @st.cache_data  
+    def Data_Incident(chemin):
+        dico = {'IncidentNumber' : 'str',
+                    "CalYear" : 'str'}
+        Incidents = pd.read_csv(chemin, dtype = dico)
+        return Incidents
+
+    # fonction pour charger le df mergé
+    @st.cache_data  
+    def Data_Merge(chemin):
+        dico = {'IncidentNumber' : 'str',
+                "CalYear" : "str",
+                    "Easting_m" : 'str',
+                    "Northing_m" : "str",
+                    "UPRN" : "str" ,
+                    "USRN" : "str",
+                    "Easting_rounded" : "str",
+                    "Northing_rounded" : "str"
+            }
+        Merge = pd.read_csv(chemin, dtype = dico)
+        return Merge
+
+    # le dataFrame avec les données encodées et filtre 2020
+    @st.cache_data
+    def Data_Mod(chemin):
+        
+        dico = {'IncidentNumber' : 'str',     
+            }
+        df = pd.read_csv(chemin, dtype = dico)
+        # ncr de rename les colonnes avec les noms d'origine car les nouvelles étaient utilisées pour conserver les  valeurs originales après un pd.getdummies
+        df = df.rename(columns={"IncidentGroup_orig" : "IncidentGroup",
+                        "StopCodeDescription_orig" : "StopCodeDescription",
+                        "PropertyCategory_orig" : "PropertyCategory"})
+
+        df["dst_StationIncident"] = df["dst_StationIncident"]/1000
+
+        return df
+
+    Mobilisation = Data_Mob("Data/Mobilisation_2009_2023.csv")[0]
+    # Mob_pompes_12 = Data_Mob("Data/Mobilisation_2009_2023.csv")[1]
+    Incidents = Data_Incident("Data/Incidents_2009_2024.csv")
+    Merge = Data_Merge("Data/Data_Mergees.csv")
+    df_2020 = Data_Mod("Data/Data_Encodee_V2_2_2020.csv") 
+
+    if "Mobilisation" not in st.session_state :
+        st.session_state["Mobilisation"] = Data_Mob("Data/Mobilisation_2009_2023.csv")[0]
+        
+    if "Mob_pompes_12" not in st.session_state :
+        st.session_state["Mob_pompes_12"] = Data_Mob("Data/Mobilisation_2009_2023.csv")[1]
+
+    if "Incidents" not in st.session_state :
+        st.session_state["Incidents"] = Data_Incident("Data/Incidents_2009_2024.csv")
+        
+    if "Merge" not in st.session_state :
+        st.session_state["Merge"] = Data_Merge("Data/Data_Mergees.csv")
+        
+    if "df_2020" not in st.session_state :
+        st.session_state["df_2020"] = Data_Mod("Data/Data_Encodee_V2_2_2020.csv")
     
-    st.title("Exploration des Données")
     
-   
+    st.write("### Exploration des Données")
     st.write("Nous avons deux types de dataset à notre disposition: les Incidents Records, contenant 39 colonnes avec des informations sur les incidents ou les pompiers de Londres sont intervenus et les Mobilisation Records, contenant 22 colonnes avec des informations sur le temps de réaction des engins des pompiers.")
-    #st.image("Incidents par jour de l'annee.png")
+    st.dataframe(Incidents.head(10))
+    st.dataframe(Mobilisation.head(10))
+    st.write("-------")
+
     st.write("Nous démarrons l'exploration des données avec cette representation du nombre d'Incidents par jour de l'année")
     st.write("On remarque un nombre d'interventions comparable chaque année, avec quelques pics ponctuels en 2009, 2013 et 2016, probablement dus à des événements majeurs. Une hausse d'incidents est également observable chaque été.")
+    #st.image("Incidents par jour de l'annee.png")
     st.write("-------")
-    #st.image("Typologie d'incidents par annee.png")
-    st.write("Ces graphiques circulaires montrent que la répartition en pourcentage par type d'appel est relativement constante. Près de la moitié des incidents sont des fausses alertes.")
-    st.write("-------")
-    #st.image("Nombre d'interventions en fonction de l'heure d'appel.png")
-    #st.image("Temps moyen de reaction en fonction de l'heure d'appel.png")
-    st.write("Le premier graphique montre que la majorité des interventions ont lieu pendant la journée.")
-    st.write("Le deuxieme graphique montre le temps de réponse de la première brigade en fonction de l'heure d'appel. On constate des temps de réaction accrus eu petit matin (4h-7h) et en début d'après-midi (12h-17h)..")
-    st.write("-------")
-    st.image("Distribution du temps de reaction du premier camion sur place.png")
-    st.write("Nous avons commencé a nous penché plus sur les temps de réaction. nous Montrons ci dessus la distribution des temps de reaction en minutes des premiers et deuxiemes camions intervenus.")
-    st.write("-------")
-    #st.image("plan des casernes de londres.png")
-    st.write("Les données ont été enrichies avec les localisations des casernes de Londres. Avec les coordonnées des stations et des lieux d'intervention, nous avons pu calculer la distance à parcourir par les camions, une donnée pertinente pour notre analyse.")
 
+    st.write("Ces graphiques circulaires montrent que la répartition en pourcentage par type d'appel est relativement constante. Près de la moitié des incidents sont des fausses alertes.")
+    #st.image("Typologie d'incidents par annee.png")
+    st.write("-------")
+
+    st.write("Ce premier graphique montre que la majorité des interventions ont lieu pendant la journée.")
+    #st.image("Nombre d'interventions en fonction de l'heure d'appel.png")
+    st.write("Le deuxieme graphique montre le temps de réponse de la première brigade en fonction de l'heure d'appel. On constate des temps de réaction accrus eu petit matin (4h-7h) et en début d'après-midi (12h-17h).")
+    #st.image("Temps moyen de reaction en fonction de l'heure d'appel.png")
+    st.write("-------")
+
+    st.write("Nous avons commencé a nous pencher plus sur les temps de réaction. nous Montrons ci dessus la distribution des temps de reaction en minutes des premiers et deuxiemes camions intervenus.")
+    st.image("Distribution du temps de reaction du premier camion sur place.png")
+    st.write("-------")
+
+    st.write("Les données ont été enrichies avec les localisations des casernes de Londres. Avec les coordonnées des stations et des lieux d'intervention, nous avons pu calculer la distance à parcourir par les camions, une donnée pertinente pour notre analyse.")
+    #st.image("plan des casernes de londres.png")
+    st.write("-------")
+
+    st.write("Nous avons ensuite procédé au merge des données Incidents et Mobilisation afin de pouvour travailler sur un seul Dataframe")
+    st.dataframe(Merge.head(10))
+    st.write("-------")
+
+    st.write("Nous avons ensuite proédé a l'encodage de nos données")
+    st.write("Le Mean Encoding a été appliqué aux données catégorielles qui nous on servis de features.")
+    st.write("Nos datasets contiennent des données temporelles sur plusieurs années, mois, jours et heures. Ainsi, le Cyclic Encoding s'est avéré nécessaire..")
+    st.dataframe(df_2020.head(10))
+    st.text(df_2020.info(memory_usage='deep'))
+    st.write("-------")
 
 
 
@@ -488,6 +499,10 @@ if page == pages[3] :
             
             else  :
                 R2_train, MAE_train, MSE_train, R2_test, MAE_test, MSE_test = calcul_metrics_reg(md_reg1,X_train_reg_sc,X_test_reg_sc)
+                if reg_model1 == "Polynomiale" :
+                    y_pred = md_reg1.predict(X_test_poly[0:250,:])
+                else :
+                    y_pred = md_reg1.predict(X_test_reg_sc[0:250,:])
             
             st.write("R2 train :", R2_train, " R2 test :", R2_test )
             st.write("MAE train :" , MAE_train," MAE test :",MAE_test)
@@ -530,13 +545,15 @@ if page == pages[3] :
                 reg_mode2 = st.selectbox("Sélectionnez un modèle", modeles_reg, key = "reg_mod2")
                 md_reg2 = dico_model_reg[reg_mode2]
 
-                R2_train, MAE_train, MSE_train, R2_test, MAE_test, MSE_test,y_pred = st.session_state["model_reg_choisi"][reg_mode2].values()
-                # else :
-                #     R2_train, MAE_train, MSE_train, R2_test, MAE_test, MSE_test = calcul_metrics_reg(md_reg2,X_train_reg_sc,X_test_reg_sc)
-                #     if reg_mode2 =="Polynomiale" :
-                #         y_pred = md_reg2.predict(X_test_poly[0:250,:])
-                #     else :
-                #         y_pred = md_reg2.predict(X_test_reg_sc[0:250])
+                if reg_model1 in st.session_state["model_reg_choisi"] :
+                    R2_train, MAE_train, MSE_train, R2_test, MAE_test, MSE_test,y_pred = st.session_state["model_reg_choisi"][reg_mode2].values()
+                
+                else :
+                    R2_train, MAE_train, MSE_train, R2_test, MAE_test, MSE_test = calcul_metrics_reg(md_reg2,X_train_reg_sc,X_test_reg_sc)
+                    if reg_mode2 =="Polynomiale" :
+                        y_pred = md_reg2.predict(X_test_poly[0:250,:])
+                    else :
+                        y_pred = md_reg2.predict(X_test_reg_sc[0:250,:])
 
                 
                 st.write("R2 train :", R2_train, " R2 test :", R2_test )
@@ -581,9 +598,9 @@ if page == pages[3] :
                 st.pyplot(fig)      
 
         else :
-            y_pred = md_reg1.predict(X_test_reg_sc[0:250])
+            y_pred1 = md_reg1.predict(X_test_reg_sc[0:250])
             fig = plt.figure(figsize = (15,8))
-            plt.plot(y_pred)
+            plt.plot(y_pred1)
             plt.plot(y_test_reg[0:250].values)
             plt.legend(["predit","reel"])
             plt.title("Comparaison des valeurs prédites et réelles")
@@ -592,11 +609,13 @@ if page == pages[3] :
             st.pyplot(fig)
         
         reg_mode2 = st.session_state.reg_mod2
+        md_reg2 = dico_model_reg[reg_mode2]
+        y_pred2 = md_reg2.predict(X_test_reg_sc[0:250,:])
         
         if reg_mode2 == "Polynomiale":
                     
                     fig = plt.figure(figsize = (15,8))
-                    plt.plot(y_pred)
+                    plt.plot(y_pred2)
                     plt.plot(y_test_reg[0:250].values)
                     plt.legend(["predit","reel"])
                     plt.xlabel("Index")
@@ -607,7 +626,7 @@ if page == pages[3] :
         else :
 
             fig = plt.figure(figsize = (15,8))
-            plt.plot(y_pred)
+            plt.plot(y_pred2)
             plt.plot(y_test_reg[0:250].values)
             plt.legend(["predit","reel"])
             plt.xlabel("Index")
@@ -853,8 +872,18 @@ if page == pages[3] :
                 class_option2 = st.selectbox("Sélectionnez un modèle", modeles,key = "class_mod2 ")
 
                 mat, rapport = rapport_mat(class_option2)
+                st.text(" \n")
+                st.text(" \n")
+                st.text(" \n")
+                st.text(" \n")
                 st.table(mat)
+                st.text(" \n")
+                st.text(" \n")
+                st.text(" \n")
                 st.dataframe(rapport.transpose()[0:5],width=450)
+                st.text(" \n")
+                st.text(" \n")
+                st.text(" \n")
                 st.dataframe(rapport.iloc[0:1,5:])
     
                 
@@ -1130,7 +1159,6 @@ if page == pages[3] :
             return bins, class_labels ,ordre , dico
         
         bins, class_labels , order, dico = get_bins_and_labels(bin_option)
-        
         
         X_train, X_test, y_train, y_test = prepare_data(df,bin_option=bin_option)
 
